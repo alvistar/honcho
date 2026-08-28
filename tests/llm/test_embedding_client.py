@@ -792,3 +792,45 @@ async def test_chunking_leaves_room_for_the_prefix(
         assert len(client.encoding.encode(document_prefix + chunk)) <= (
             budget + client._prefix_tokens["document"]  # pyright: ignore[reportPrivateUsage]
         )
+
+
+# ---------------------------------------------------------------------------
+# Task prefixes reach the runtime client THROUGH the config layer.
+#
+# The tests above build _EmbeddingClient directly, so they pass even when the
+# operator-facing plumbing is missing entirely: the prefixes were declared on
+# EmbeddingModelConfig but not on ConfiguredEmbeddingModelSettings, and
+# resolve_embedding_model_config never copied them. Every documented way to
+# set a prefix (config.toml and EMBEDDING_MODEL_CONFIG__QUERY_PREFIX) silently
+# resolved to "". These tests exercise that path.
+# ---------------------------------------------------------------------------
+
+
+def test_configured_prefixes_survive_resolution(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    s = _build_embedding_settings(
+        {
+            "EMBEDDING_MODEL_CONFIG__QUERY_PREFIX": "Instruct: find it\nQuery:",
+            "EMBEDDING_MODEL_CONFIG__DOCUMENT_PREFIX": "passage: ",
+        },
+        monkeypatch,
+    )
+
+    assert s.MODEL_CONFIG.query_prefix == "Instruct: find it\nQuery:"
+    assert s.MODEL_CONFIG.document_prefix == "passage: "
+
+    resolved = resolve_embedding_model_config(s.MODEL_CONFIG)
+    assert resolved.query_prefix == "Instruct: find it\nQuery:"
+    assert resolved.document_prefix == "passage: "
+
+
+def test_unset_prefixes_resolve_to_empty(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The default has to stay empty so symmetric models are untouched."""
+    s = _build_embedding_settings({}, monkeypatch)
+
+    resolved = resolve_embedding_model_config(s.MODEL_CONFIG)
+    assert resolved.query_prefix == ""
+    assert resolved.document_prefix == ""

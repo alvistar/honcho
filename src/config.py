@@ -387,6 +387,12 @@ class ConfiguredEmbeddingModelSettings(BaseModel):
     overrides: ModelOverrideSettings = Field(default_factory=ModelOverrideSettings)
     dimensions_mode: EmbeddingDimensionsMode = "auto"
     max_batch_size: Annotated[int, Field(gt=0)] | None = None
+    # Operator-facing half of the task prefixes. EmbeddingModelConfig below
+    # carries the same two fields for the runtime client; without them here
+    # the documented EMBEDDING_MODEL_CONFIG__QUERY_PREFIX env var and the
+    # config.toml key both parse into nothing.
+    query_prefix: str = ""
+    document_prefix: str = ""
 
     @model_validator(mode="before")
     @classmethod
@@ -561,6 +567,8 @@ def resolve_embedding_model_config(
         api_key=api_key,
         base_url=configured.overrides.base_url,
         max_batch_size=configured.max_batch_size,
+        query_prefix=configured.query_prefix,
+        document_prefix=configured.document_prefix,
     )
 
 
