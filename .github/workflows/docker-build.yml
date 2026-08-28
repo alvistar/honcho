@@ -25,7 +25,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3.3.0
         with:
-          platforms: linux/amd64, linux/arm64
+          platforms: linux/amd64
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v5.5.1
@@ -46,7 +46,7 @@ jobs:
         uses: docker/build-push-action@v5.3.0
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
